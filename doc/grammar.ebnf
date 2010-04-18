@@ -1,0 +1,61 @@
+
+start = module declaration , declarations ;
+
+module declaration = "module" , fully qualified identifier , ";" ;
+
+fully qualified identifier = identifier , { "." , identifier } ;;
+
+declarations = { declaration } ;
+
+declaration = import declaration
+            | const declaration
+            | class declaration
+            | struct declaration
+            | ro declaration
+            | rw declaration
+            | func declaration
+            | op declaration
+            | annotation scope
+            | mixin ;
+
+import declaration = "import" , fully qualified identifier , 
+                     [ ":" , identifier ] ";" ;
+
+const declaration = "const" , identifier ";" ;
+
+aggregate declaration = identifier , [ annotations ] ,
+                        "{" , declarations , "}" ;
+
+class declaration = "class" , aggregate declaration ;
+
+struct declaration = "struct" , aggregate declaration ;
+
+accessor declaration = identifier , ":" , type ;
+
+ro declaration = "ro" , accessor declaration ;
+
+rw declaration = "rw" , accessor declaration ;
+
+func declaration = "func" , identifier , [ annotations ] ,
+                   argument list , [ ":" , type ] ";" ;
+
+op declaration = "op" , identifier , [ op argument list ] ,
+                 [ ":" , type ] , ";" ;
+
+annotation scope = annotations , "{" , declarations , "}" ;
+
+annotations = "[" , annotation , { "," , annotation } , "]" ;
+
+annotation = <identifier> ;
+
+argument list = "(" , [ argument , { "," , argument } ] , ")" ;
+
+op argument list = "(" , [ type , { "," , type } ] , ")" ;
+
+argument = identifier , [ annotations ] , ":" , type ;
+
+type = fully qualified identifier
+     | fully qualified identifier , "[" , "]" ;
+
+mixin = "mixin" , <mixin string> ;
+
