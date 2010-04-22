@@ -90,6 +90,10 @@ class CGSemVisitor(SemVisitor):
         self.generateAggregate(node, st)
 
 
+    def visitSemStructDecl(self, node, st):
+        self.generateAggregate(node, st)
+
+
     def generateAggregate(self, node, st):
         class_fqn = st.module.fqi + '.' + node.ident
         is_class = isinstance(node, SemClassDecl)
@@ -148,7 +152,7 @@ class CGSemVisitor(SemVisitor):
         
         # initModule
         (st.o
-         .pl('void init(md.MDThread* t)')
+         .pl('void initModule(md.MDThread* t)')
          .push('{')
          .pl('if( classRef == classRef.max )')
          .push().pl('init(t);').pop()
@@ -219,6 +223,20 @@ class CGSemVisitor(SemVisitor):
          .pl('return r;'
              if is_class else
              'return r.value;')
+         .pop('}')
+         .l()
+         )
+
+        # popPtr
+        (st.o
+         .pl('void popPtr(MDThread* t, void* ptr)')
+         .push('{')
+         )
+        if is_class:
+            st.o.pl('*(cast(RawWrapRef*)(ptr)) = popValue(t);')
+        else:
+            st.o.pl('*(cast(RawWrapRef)(ptr)) = popValue(t);')
+        (st.o
          .pop('}')
          .l()
          )
@@ -348,10 +366,6 @@ class CGSemVisitor(SemVisitor):
         (st.o
          .pop('}')
          )
-
-
-    def visitSemStructDecl(self, node, st):
-        self.unimpl(node, st)
 
 
     def visitSemRoDecl(self, node, st):
@@ -638,6 +652,45 @@ class CGSemVisitor(SemVisitor):
             ident = ty.ident
             st.o.fl('MD_%s.checkInstParam(t, %d);', ident, slot)
 
+        elif isinstance(ty, SemArrayType):
+            ety = ty.elemType
+            assert isinstance(ety, SemSymbolType), "nested arrays not supported"
+            ident = ety.ident
+
+            checkFn = None
+            nativeType = ident
+
+            if ident in BASIC_TYPES:
+                if ident == 'ulong':
+                    assert False, '%s: ulongs not supported' % ty.src
+
+                if ident == 'bool':
+                    checkFn = '&md.checkBoolParam'
+
+                elif ident in ('byte', 'short', 'int', 'long',
+                               'ubyte', 'ushort', 'uint'):
+                    checkFn = '&md.checkIntParam(t, %r)'
+
+                elif ident in ('float', 'double', 'real'):
+                    checkFn = '&md.checkFloatParam'
+
+                elif ident in ('char', 'wchar', 'dchar'):
+                    checkFn = '&md.checkCharParam'
+
+                elif ident == 'string':
+                    checkFn = '&md.checkStringParam'
+                    nativeType = 'char[]'
+
+                elif ident == 'size_t':
+                    checkFn = '&md.checkIntParam'
+
+            else:
+                checkFn = '&MD_%s.checkInstParam' % ident
+
+            st.o.fl('mdi.NativeArray.checkInstParam(t, %d, %s, typeid(%s));',
+                    slot, checkFn, nativeType)
+            
+
         else:
             st.o.fl('unimplemented/* type check %s, %d */;', ty, slot)
 
@@ -674,6 +727,29 @@ class CGSemVisitor(SemVisitor):
         elif isinstance(ty, SemSymbolType):
             ident = ty.ident
             return 'MD_%s.getWrap(t, %d)' % (ident, slot)
+
+        elif isinstance(ty, SemArrayType):
+            ety = ty.elemType
+            assert isinstance(ety, SemSymbolType), "nested arrays not supported"
+            ident = ety.ident
+
+            popFn = None
+            nativeType = ety.ident
+
+            if ident in BASIC_TYPES:
+                if ident == 'ulong':
+                    assert False, '%s: ulongs not supported' % ty.src
+                    
+                if ident == 'string':
+                    nativeType = 'char[]'
+
+                popFn = '&mdi.popPtr!(%s)' % nativeType
+
+            else:
+                popFn = '&MD_%s.popPtr' % nativeType
+
+            return ('to!(%s[])(mdi.NativeArray.popValue(t, %s, typeid(%s))'
+                    % (nativeType, popFn, nativeType))
 
         else:
             return 'unimplemented/* type read %s, %d */' % (ty, slot)
