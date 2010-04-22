@@ -95,12 +95,19 @@ class SemAstVisitor(AstVisitor):
 
         oldAn = st.annots
         st.annots = []
+
+        def addDecl(decl):
+            if isinstance(decl, SemFuncDecl) and decl.ident == "this":
+                sn.ctors.append(decl)
+            else:
+                sn.decls.append(decl)
         
         for decl in node.decls:
             if isinstance(decl, AstAnnotScope):
-                sn.decls += self.visit(decl, st)
+                for subdecl in self.visit(decl, st):
+                    addDecl(subdecl)
             else:
-                sn.decls.append(self.visit(decl, st))
+                addDecl(self.visit(decl, st))
 
         st.annots = oldAn
         st.enclosingType = oldET
@@ -121,12 +128,19 @@ class SemAstVisitor(AstVisitor):
 
         oldAn = st.annots
         st.annots = []
+
+        def addDecl(decl):
+            if isinstance(decl, SemFuncDecl) and decl.ident == "this":
+                sn.ctors.append(decl)
+            else:
+                sn.decls.append(decl)
         
         for decl in node.decls:
             if isinstance(decl, AstAnnotScope):
-                sn.decls += self.visit(decl, st)
+                for subdecl in self.visit(decl, st):
+                    addDecl(subdecl)
             else:
-                sn.decls.append(self.visit(decl, st))
+                addDecl(self.visit(decl, st))
 
         st.annots = oldAn
         st.enclosingType = oldET
@@ -156,6 +170,9 @@ class SemAstVisitor(AstVisitor):
         sn = SemFuncDecl()
         sn.src = node.src
         sn.ident = node.ident
+
+        if node.ident == "this":
+            assert node.returnType is None, "constructors cannot have a return type"
         
         if node.returnType is not None:
             sn.returnType = self.visit(node.returnType, st)
@@ -230,6 +247,9 @@ class SemAstVisitor(AstVisitor):
 
             elif annot == 'lazy':
                 sn.isLazy = True
+
+            elif annot == 'vararg':
+                sn.isVararg = True
 
             else:
                 assert False, "unknown arg annotation '%s'" % annot

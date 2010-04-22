@@ -80,16 +80,23 @@ class SemConstDecl(SemDecl):
 class SemAggregateDecl(SemDecl):
 
     ident = None
+    ctors = None
     decls = None
 
     def __init__(self):
+        self.ctors = []
         self.decls = []
 
     def valid(self):
         return all((
             self.ident is not None,
+            self.ctors is not None,
+            all(isinstance(decl, SemFuncDecl) for decl in self.ctors),
+            all(decl.ident == "this" for decl in self.ctors),
             self.decls is not None,
             all(isinstance(decl, SemDecl) for decl in self.decls),
+            all(decl.ident != "this" for decl in self.decls
+                if isinstance(decl, SemFuncDecl)),
         ))
 
 
@@ -177,9 +184,7 @@ class SemArgument(SemNode):
     isRef = False
     isOut = False
     isLazy = False
-
-    def __init__(self):
-        self.annots = []
+    isVararg = False
 
     def valid(self):
         return all((
