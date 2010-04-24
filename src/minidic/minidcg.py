@@ -528,6 +528,15 @@ class CGSemVisitor(SemVisitor):
          )
 
         for overload in overloads:
+            # If we've got a body mixin, just dump that in.
+            if overload.body is not None:
+                (st.o
+                 .push('{')
+                 .do(self.visit(overload.body, st))
+                 .pop('}')
+                 )
+                continue
+            
             void_ret = False
 
             if (isinstance(overload.returnType, SemSymbolType)
@@ -595,7 +604,7 @@ class CGSemVisitor(SemVisitor):
 
 
     def visitSemMixin(self, node, st):
-        st.o.r(node.code)
+        st.o.r(node.code).l()
 
 
     def generateModuleInit(self, node, st):
@@ -903,7 +912,7 @@ class CGSemVisitor(SemVisitor):
 
 
     def generateInitMethodBinds(self, node, st):
-        for decl in node.decls:
+        for decl in (d for d in node.decls if isinstance(d, (SemFuncDecl, SemOpDecl))):
             if decl.ident == "this": continue
 
             if isinstance(decl, SemMixin):

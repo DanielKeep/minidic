@@ -99,13 +99,15 @@ class SemAstVisitor(AstVisitor):
         oldAn = st.annots
         st.annots = []
 
-        decls = []
+        funcDecls = []
 
         def addDecl(decl):
             if isinstance(decl, SemFuncDecl) and decl.ident == "this":
                 sn.ctors.append(decl)
+            elif isinstance(decl, SemFuncDecl) or isinstance(decl, SemOpDecl):
+                funcDecls.append(decl)
             else:
-                decls.append(decl)
+                sn.decls.append(decl)
         
         for decl in node.decls:
             if isinstance(decl, AstAnnotScope):
@@ -114,7 +116,7 @@ class SemAstVisitor(AstVisitor):
             else:
                 addDecl(self.visit(decl, st))
 
-        for (fnIdent, overloads) in groupby(decls, lambda d: d.ident):
+        for (fnIdent, overloads) in groupby(funcDecls, lambda d: d.ident):
             overloads = list(overloads)
             if len(overloads) == 1:
                 sn.decls.append(overloads[0])
@@ -149,9 +151,14 @@ class SemAstVisitor(AstVisitor):
         oldAn = st.annots
         st.annots = []
 
+        decls = []
+        funcDecls = []
+
         def addDecl(decl):
             if isinstance(decl, SemFuncDecl) and decl.ident == "this":
                 sn.ctors.append(decl)
+            elif isinstance(decl, SemFuncDecl) or isinstance(decl, SemOpDecl):
+                funcDecls.append(decl)
             else:
                 sn.decls.append(decl)
         
@@ -161,6 +168,21 @@ class SemAstVisitor(AstVisitor):
                     addDecl(subdecl)
             else:
                 addDecl(self.visit(decl, st))
+
+        for (fnIdent, overloads) in groupby(funcDecls, lambda d: d.ident):
+            overloads = list(overloads)
+            if len(overloads) == 1:
+                sn.decls.append(overloads[0])
+
+            else:
+                ov = SemOverloadDecl()
+                ov.ident = fnIdent
+                ov.type = type(overloads[0])
+                ov.overloads = sorted(overloads,
+                                      key=lambda o: len(o.args),
+                                      reverse=True)
+                assert ov.valid()
+                sn.decls.append(ov)
 
         st.annots = oldAn
         st.enclosingType = oldET
@@ -213,6 +235,8 @@ class SemAstVisitor(AstVisitor):
         for arg in node.args:
             sn.args.append(self.visit(arg, st))
 
+        sn.body = self.visit(node.body, st)
+
         return sn
 
 
@@ -234,6 +258,8 @@ class SemAstVisitor(AstVisitor):
 
         if sn.returnType is None:
             sn.returnType = guessOpReturnType(sn.ident, st)
+
+        sn.body = self.visit(node.body, st)
 
         return sn
 

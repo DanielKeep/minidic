@@ -30,17 +30,17 @@ class declaration = "class" , aggregate declaration ;
 
 struct declaration = "struct" , aggregate declaration ;
 
-accessor declaration = identifier , ":" , type ;
-
 ro declaration = "ro" , accessor declaration ;
 
 rw declaration = "rw" , accessor declaration ;
 
+accessor declaration = identifier , ":" , type ;
+
 func declaration = "func" , identifier , [ annotations ] ,
-                   argument list , [ ":" , type ] ";" ;
+                   argument list , [ ":" , type ] , body ;
 
 op declaration = "op" , identifier , [ op argument list ] ,
-                 [ ":" , type ] , ";" ;
+                 [ ":" , type ] , body ;
 
 annotation scope = annotations , "{" , declarations , "}" ;
 
@@ -53,6 +53,9 @@ argument list = "(" , [ argument , { "," , argument } ] , ")" ;
 op argument list = "(" , [ ":" , type , { "," , ":" , type } ] , ")" ;
 
 argument = identifier , [ annotations ] , ":" , type ;
+
+body = ";"
+     | <mixin string> ;
 
 type = fully qualified identifier
      | fully qualified identifier , "[" , "]" ;

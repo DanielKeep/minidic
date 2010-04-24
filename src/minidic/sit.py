@@ -140,6 +140,7 @@ class SemFuncDecl(SemDecl):
     ident = None
     args = None
     returnType = None
+    body = None
 
     isFinal = False
     isStatic = False
@@ -153,6 +154,7 @@ class SemFuncDecl(SemDecl):
             self.args is not None,
             all(isinstance(arg, SemArgument) for arg in self.args),
             isinstance(self.returnType, SemType),
+            isinstance(self.body, SemMixin) if self.body is not None else True,
         ))
 
 
@@ -162,6 +164,7 @@ class SemOpDecl(SemDecl):
     ident = None
     args = None
     returnType = None
+    body = None
 
     def __init__(self):
         self.args = []
@@ -172,6 +175,7 @@ class SemOpDecl(SemDecl):
             self.args is not None,
             all(isinstance(arg, SemArgument) for arg in self.args),
             isinstance(self.returnType, SemType),
+            isinstance(self.body, SemMixin) if self.body is not None else True,
         ))
 
 

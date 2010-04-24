@@ -218,7 +218,7 @@ def tryParseFuncDecl(ls):
     func.annots = tryParseAnnotations(ls) or []
     func.args = parseArgumentList(ls)
     func.returnType = tryParseTypeConstraint(ls)
-    ls.popExpect(TOKsemi)
+    func.body = parseBody(ls)
 
     return func
 
@@ -231,7 +231,7 @@ def tryParseOpDecl(ls):
     op.ident = ls.popExpect(TOKident).value
     op.args = tryParseOpArgs(ls)
     op.returnType = tryParseTypeConstraint(ls)
-    ls.popExpect(TOKsemi)
+    op.body = parseBody(ls)
 
     return op
 
@@ -377,6 +377,17 @@ def parseArgument(ls):
     arg.annots = tryParseAnnotations(ls) or []
     arg.type = parseTypeConstraint(ls)
     return arg
+
+
+def parseBody(ls):
+    if ls.peek().type == TOKsemi:
+        ls.pop()
+        return None
+
+    body = AstMixin()
+    body.src = ls.peek().src
+    body.code = ls.popExpect(TOKcode).tokValue
+    return body
 
 
 def tryParseTypeConstraint(ls):

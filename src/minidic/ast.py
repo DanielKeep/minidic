@@ -176,6 +176,7 @@ class AstFuncDecl(AstDecl):
     annots = None
     args = None
     returnType = None
+    body = None
 
     def __init__(self):
         self.annots = []
@@ -199,6 +200,9 @@ class AstFuncDecl(AstDecl):
             o.l()
         else:
             o.fl("Return : void")
+        if self.body:
+            o.pl("Body")
+            self.body.dump(o)
         o.pop("}")
 
 
@@ -208,6 +212,7 @@ class AstOpDecl(AstFuncDecl):
     ident = None
     args = None
     returnType = None
+    body = None
 
     def __init__(self):
         self.args = []
@@ -231,6 +236,10 @@ class AstOpDecl(AstFuncDecl):
             o.l()
         else:
             o.fl("Return auto")
+
+        if self.body:
+            o.pl("Body")
+            self.body.dump(o)
             
         o.pop("}")
 
