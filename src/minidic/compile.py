@@ -63,6 +63,10 @@ def compile(pkg, path, follow=True, done=None):
                 modPath = os.path.join(newPath, '__package__.mdi')
             else:
                 modPath = newPath + '.mdi'
+
+            if not os.path.exists(modPath):
+                print 'Warning: missing module %s' % modPath
+                continue
                 
             compile(pkg, modPath, done=done)
 
