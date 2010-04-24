@@ -162,7 +162,7 @@ class CGSemVisitor(SemVisitor):
             (st.o
              .fl('enum : bool { WrapStruct = true }')
              .fl('alias %s* RawWrapRef;', class_fqn)
-             .fl('alias StructBox!(%s) Wrap;', class_fqn)
+             .fl('alias mdi.StructBox!(%s) Wrap;', class_fqn)
              )
             
         (st.o
@@ -777,7 +777,7 @@ class CGSemVisitor(SemVisitor):
             else:
                 checkFn = '&MD_%s.checkInstParam' % ident
 
-            st.o.fl('mdi.NativeArray.checkInstParam(t, %d, %s, typeid(%s));',
+            st.o.fl('mdi.MD_NativeArray.checkInstParam(t, %d, %s, typeid(%s));',
                     slot, checkFn, nativeType)
             
 
@@ -838,8 +838,8 @@ class CGSemVisitor(SemVisitor):
             else:
                 popFn = '&MD_%s.popPtr' % nativeType
 
-            return ('to!(%s[])(mdi.NativeArray.popValue(t, %s, typeid(%s))'
-                    % (nativeType, popFn, nativeType))
+            return ('to!(%s[])(mdi.MD_NativeArray.popValue(t, %d, %s, typeid(%s))'
+                    % (nativeType, slot, popFn, nativeType))
 
         else:
             return 'unimplemented/* type read %s, %d */' % (ty, slot)
@@ -892,10 +892,10 @@ class CGSemVisitor(SemVisitor):
                 if ident == 'ulong':
                     assert False, "%s: ulongs not supported" % ty.src
 
-                st.o.fl('mdi.NativeArray.createFrom(t, value);')
+                st.o.fl('mdi.MD_NativeArray.createFrom(t, value);')
 
             elif est:
-                st.o.fl('mdi.NativeArray.createFrom(t, value,'
+                st.o.fl('mdi.MD_NativeArray.createFrom(t, value,'
                         +' &MD_%s.pushPtr);', ety.ident)
 
         else:
