@@ -90,6 +90,9 @@ class SemAstVisitor(AstVisitor):
             if annot == "final":
                 sn.isFinal = True
 
+            elif annot == "nativeLocal":
+                sn.nativeLocal = True
+
             else:
                 assert False, "unknown class annotation '%s'" % annot
 
@@ -143,7 +146,11 @@ class SemAstVisitor(AstVisitor):
         sn.ident = node.ident
 
         for annot in (a.ident for a in (node.annots or []) + st.annots):
-            assert False, "unknown struct annotation '%s'" % annot
+            if annot == "nativeLocal":
+                sn.nativeLocal = True
+
+            else:
+                assert False, "unknown struct annotation '%s'" % annot
 
         oldET = st.enclosingType
         st.enclosingType = sn

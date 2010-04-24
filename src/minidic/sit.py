@@ -83,6 +83,8 @@ class SemAggregateDecl(SemDecl):
     ctors = None
     decls = None
 
+    nativeLocal = False
+
     def __init__(self):
         self.ctors = []
         self.decls = []

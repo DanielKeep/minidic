@@ -138,14 +138,18 @@ class CGSemVisitor(SemVisitor):
 
     def generateAggregate(self, node, st):
         class_fqn = st.module.fqi + '.' + node.ident
+        class_fqn_md = class_fqn
         is_class = isinstance(node, SemClassDecl)
+
+        if node.nativeLocal:
+            class_fqn = node.ident
         
         (st.o
          .fl('struct MD_%s', node.ident)
          .push('{')
          .pop().fl('static:').push()
          .fl('const Name = "%s";', node.ident)
-         .fl('const FQName = "%s";', class_fqn)
+         .fl('const FQName = "%s";', class_fqn_md)
          .l()
          .fl('/// Reference to the MiniD class')
          .fl('ulong classRef = ulong.max;')
@@ -646,6 +650,9 @@ class CGSemVisitor(SemVisitor):
     def generateCtor(self, node, st):
         class_fqn = st.module.fqi + '.' + node.ident
         is_class = isinstance(node, SemClassDecl)
+
+        if node.nativeLocal:
+            class_fqn = node.ident
 
         # We need to deal with the possibility of there being multiple
         # constructors available.
