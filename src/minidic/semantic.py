@@ -13,6 +13,8 @@ class SemState(object):
     annots = None
     isOpArg = False
 
+    isPackage = False
+
     def __init__(self):
         self.annots = []
 
@@ -60,6 +62,25 @@ class SemAstVisitor(AstVisitor):
         return sn
 
 
+    def visitAstPackage(self, node, st):
+        sn = SemPackage()
+        sn.src = node.src
+        sn.fqi = node.fqi
+
+        st.isPackage = node.fqi
+
+        for decl in node.decls:
+            if isinstance(decl, AstImportDecl):
+                sn.decls.append(self.visit(decl, st))
+
+            else:
+                assert False, "unexpected %s in package" % str(type(decl))
+
+        st.isPackage = False
+
+        return sn
+
+
     def visitAstImportDecl(self, node, st):
         sn = SemImportDecl()
         sn.src = node.src
@@ -68,6 +89,9 @@ class SemAstVisitor(AstVisitor):
 
         if sn.symbol is None:
             sn.symbol = sn.module.rsplit('.', 1)[-1]
+
+        if st.isPackage:
+            sn.module = st.isPackage + '.' + sn.module
 
         return sn
 
@@ -242,7 +266,8 @@ class SemAstVisitor(AstVisitor):
         for arg in node.args:
             sn.args.append(self.visit(arg, st))
 
-        sn.body = self.visit(node.body, st)
+        if node.body is not None:
+            sn.body = self.visit(node.body, st)
 
         return sn
 
@@ -266,7 +291,8 @@ class SemAstVisitor(AstVisitor):
         if sn.returnType is None:
             sn.returnType = guessOpReturnType(sn.ident, st)
 
-        sn.body = self.visit(node.body, st)
+        if node.body is not None:
+            sn.body = self.visit(node.body, st)
 
         return sn
 

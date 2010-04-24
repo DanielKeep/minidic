@@ -52,6 +52,24 @@ class AstModule(AstNode):
 
 
 
+class AstPackage(AstNode):
+
+    fqi = None
+    decls = None
+
+    def __init__(self):
+        self.decls = []
+
+
+    def dump(self, o):
+        o.fl("Package %s", self.fqi)
+        o.push("{")
+        for decl in self.decls:
+            decl.dump(o)
+        o.pop("}")
+
+
+
 class AstDecl(AstNode):
     pass
 

@@ -96,12 +96,20 @@ class LexStream(object):
 
 
 def parseStart(ls):
-    modNode = parseModuleDecl(ls)
+    if ls.peek().type == TOKmodule:
+        root = parseModuleDecl(ls)
+
+    elif ls.peek().type == TOKpackage:
+        root = parsePackageDecl(ls)
+
+    else:
+        ls.err("expected 'module' or 'package', got '%s'"
+               % ls.peek().type[3:])
 
     while ls.peek().type != TOKeof:
-        modNode.decls.append(parseDecl(ls))
+        root.decls.append(parseDecl(ls))
 
-    return modNode
+    return root
 
 
 def parseModuleDecl(ls):
@@ -111,6 +119,15 @@ def parseModuleDecl(ls):
     modNode.fqi = parseFQI(ls)
     ls.popExpect(TOKsemi)
     return modNode
+
+
+def parsePackageDecl(ls):
+    tok = ls.popExpect(TOKpackage)
+    pkgNode = AstPackage()
+    pkgNode.src = tok.src
+    pkgNode.fqi = parseFQI(ls)
+    ls.popExpect(TOKsemi)
+    return pkgNode
 
 
 def parseFQI(ls):

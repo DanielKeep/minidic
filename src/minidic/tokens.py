@@ -9,6 +9,7 @@ LITERAL_TOKENS = dict((u"TOK"+p,p) for p in u"""
     module
     mixin
     op
+    package
     ro
     rw
     struct

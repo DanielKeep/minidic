@@ -46,6 +46,24 @@ class SemModule(SemNode):
 
 
 
+class SemPackage(SemNode):
+
+    fqi = None
+    decls = None
+
+    def __init__(self):
+        self.decls = []
+
+
+    def valid(self):
+        return all((
+            self.fqi is not None and self.fqi != "",
+            self.decls is not None,
+            all(isinstance(decl, SemDecl) for decl in self.decls),
+        ))
+
+
+
 class SemDecl(SemNode):
     pass
 
