@@ -228,7 +228,7 @@ class CGSemVisitor(SemVisitor):
         (st.o
          .pl('void checkInstParam(md.MDThread* t, md.word slot = 0)')
          .push('{')
-         .pl('mdu.checkInstParamRef(t, slot, classRef)')
+         .pl('mdi.checkInstParamRef(t, slot, classRef)')
          .pop('}')
          .l()
          )
@@ -399,7 +399,7 @@ class CGSemVisitor(SemVisitor):
         (st.o
          .pl('md.uword constructor(md.MDThread* t, md.uword numParams)')
          .push('{')
-         .pl('mdu.checkInstParamRef(t, 0, classRef);')
+         .pl('mdi.checkInstParamRef(t, 0, classRef);')
          .pl('auto obj = getWrap(t);')
          .l()
          .pl('if( obj is null )')
@@ -435,7 +435,7 @@ class CGSemVisitor(SemVisitor):
          .fl('md.uword method_%s(md.MDThread* t, md.uword numParams)',
              node.ident)
          .push('{')
-         .pl('mdu.checkInstParamRef(t, 0, classRef);')
+         .pl('mdi.checkInstParamRef(t, 0, classRef);')
          .pl('auto obj = getWrap(t);')
          .l()
          .pl('if( numParams > 0 )')
@@ -463,7 +463,7 @@ class CGSemVisitor(SemVisitor):
          .fl('md.uword method_%s(md.MDThread* t, md.uword numParams)',
              node.ident)
          .push('{')
-         .pl('mdu.checkInstParamRef(t, 0, classRef);')
+         .pl('mdi.checkInstParamRef(t, 0, classRef);')
          .pl('auto obj = getWrap(t);')
          .l()
          .pl('if( numParams == 0 )')
@@ -540,7 +540,7 @@ class CGSemVisitor(SemVisitor):
          .fl('md.uword %s_%s(md.MDThread* t, md.uword numParam)',
              prefix, node.ident)
          .push('{')
-         .pl('mdu.checkInstParamRef(t, 0, classRef);')
+         .pl('mdi.checkInstParamRef(t, 0, classRef);')
          .pl('auto obj = getWrap(t);')
          .l()
          )
