@@ -4,11 +4,14 @@ from ast import *
 from sit import *
 from writer import Writer
 
+from itertools import groupby
+
 
 class SemState(object):
 
     enclosingType = None
     annots = None
+    isOpArg = False
 
     def __init__(self):
         self.annots = []
@@ -96,11 +99,13 @@ class SemAstVisitor(AstVisitor):
         oldAn = st.annots
         st.annots = []
 
+        decls = []
+
         def addDecl(decl):
             if isinstance(decl, SemFuncDecl) and decl.ident == "this":
                 sn.ctors.append(decl)
             else:
-                sn.decls.append(decl)
+                decls.append(decl)
         
         for decl in node.decls:
             if isinstance(decl, AstAnnotScope):
@@ -108,6 +113,21 @@ class SemAstVisitor(AstVisitor):
                     addDecl(subdecl)
             else:
                 addDecl(self.visit(decl, st))
+
+        for (fnIdent, overloads) in groupby(decls, lambda d: d.ident):
+            overloads = list(overloads)
+            if len(overloads) == 1:
+                sn.decls.append(overloads[0])
+
+            else:
+                ov = SemOverloadDecl()
+                ov.ident = fnIdent
+                ov.type = type(overloads[0])
+                ov.overloads = sorted(overloads,
+                                      key=lambda o: len(o.args),
+                                      reverse=True)
+                assert ov.valid()
+                sn.decls.append(ov)
 
         st.annots = oldAn
         st.enclosingType = oldET
@@ -205,7 +225,9 @@ class SemAstVisitor(AstVisitor):
             sn.returnType = self.visit(node.returnType, st)
 
         if node.args is not None:
+            st.isOpArg = True
             sn.args = [self.visit(arg, st) for arg in node.args]
+            st.isOpArg = False
 
         if sn.args is None:
             sn.args = guessOpArgs(sn.ident, st)
@@ -237,6 +259,7 @@ class SemAstVisitor(AstVisitor):
         sn = SemArgument()
         sn.src = node.src
         sn.ident = node.ident
+        sn.isOpArg = st.isOpArg
 
         for annot in (a.ident for a in (node.annots or [])):
             if annot == 'ref':
@@ -254,7 +277,9 @@ class SemAstVisitor(AstVisitor):
             else:
                 assert False, "unknown arg annotation '%s'" % annot
 
+        st.isOpArg = False
         sn.type = self.visit(node.type, st)
+        st.isOpArg = sn.isOpArg
 
         return sn
 
@@ -331,9 +356,9 @@ def guessOpArgs(name, st):
 CLOSED_RT_OPS = (
     'neg', 'pos', 'com', 'postInc', 'postDec',
     'add', 'sub', 'mul', 'div', 'mod', 'and',
-    'or', 'xor', 'shl', 'shr', 'ushr', 'cat',
+    'or', 'xor', 'shl', 'shr', 'uShr', 'cat',
     'add_r', 'sub_r', 'mul_r', 'div_r', 'mod_r', 'and_r',
-    'or_r', 'xor_r', 'shl_r', 'shr_r', 'ushr_r', 'cat_r',
+    'or_r', 'xor_r', 'shl_r', 'shr_r', 'uShr_r', 'cat_r',
 )
 
 VOID_RT_OPS = (
@@ -347,7 +372,7 @@ OP_RETURN_TYPES = {
     'equals': 'int',
     'cmp': 'int',
     'in': 'bool',
-    'in_r': 'bool',
+    #'in_r': 'bool',
 }
 
 

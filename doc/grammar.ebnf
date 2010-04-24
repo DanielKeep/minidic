@@ -50,7 +50,7 @@ annotation = <identifier> ;
 
 argument list = "(" , [ argument , { "," , argument } ] , ")" ;
 
-op argument list = "(" , [ type , { "," , type } ] , ")" ;
+op argument list = "(" , [ ":" , type , { "," , ":" , type } ] , ")" ;
 
 argument = identifier , [ annotations ] , ":" , type ;
 

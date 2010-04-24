@@ -10,6 +10,11 @@ class Writer(object):
         self.depth = 0
         self.indented = False
 
+    def do(self, *pargs):
+        # Do nothing; this is just here to sequence calls that write to the
+        # stream themselves.
+        return self
+
     def r(self, s):
         self.os.write(s)
         return self

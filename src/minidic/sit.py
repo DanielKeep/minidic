@@ -170,8 +170,27 @@ class SemOpDecl(SemDecl):
         return all((
             self.ident is not None,
             self.args is not None,
-            all(isinstance(arg, SemType) for arg in self.args),
+            all(isinstance(arg, SemArgument) for arg in self.args),
             isinstance(self.returnType, SemType),
+        ))
+
+
+
+class SemOverloadDecl(SemDecl):
+
+    ident = None
+    type = None
+    overloads = None
+
+    def __init__(self):
+        self.overloads = []
+
+    def valid(self):
+        return all((
+            self.ident is not None,
+            issubclass(self.type, SemDecl),
+            all(isinstance(ol, self.type) for ol in self.overloads),
+            all(ol.ident == self.ident for ol in self.overloads),
         ))
 
 
@@ -181,6 +200,8 @@ class SemArgument(SemNode):
     ident = None
     type = None
 
+    isOpArg = False
+
     isRef = False
     isOut = False
     isLazy = False
@@ -188,7 +209,7 @@ class SemArgument(SemNode):
 
     def valid(self):
         return all((
-            self.ident is not None,
+            self.isOpArg or self.ident is not None,
             isinstance(self.type, SemType),
         ))
 

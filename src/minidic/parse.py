@@ -348,7 +348,12 @@ def tryParseOpArgs(ls):
     args = []
 
     while True:
-        args.append(parseType(ls))
+        ls.popExpect(TOKcolon)
+        
+        arg = AstArgument()
+        arg.type = parseType(ls)
+        args.append(arg)
+        
         nextTok = ls.peek()
         if nextTok.type == TOKrparen:
             break

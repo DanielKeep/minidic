@@ -37,6 +37,36 @@ BASIC_TYPES = {
     'string': None,
 }
 
+# Operators that map to 'op' + themselves with the first letter capitalised.
+# These are the same in both MiniD and D.
+
+OP_SELF = """
+    index indexAssign
+    slice sliceAssign
+    call
+    cmp equals
+    neg com inc dec
+""".split()
+
+# Binary operators: all of these have _r and Assign variants.
+
+OP_SELF_BIN = """
+    cat add sub mul div mod and or xor shl shr uShr
+""".split()
+
+# Operators which map to something other than themselves in either MiniD or D.
+# Elements are: mdi_name : (d_name, minid_name)
+
+OP_MAP = {
+    'in': ('opIn_r', 'opIn'),
+}
+
+# Operators which require special handling.
+
+OP_SPECIAL = (
+    'length', 'lengthAssign',
+)
+
 
 
 class CGSemVisitor(SemVisitor):
@@ -83,7 +113,19 @@ class CGSemVisitor(SemVisitor):
 
 
     def visitSemConstDecl(self, node, st):
-        self.unimpl(node, st)
+        (st.o
+         .fl('struct MD_%s', node.ident)
+         .push('{')
+         .pop().fl('static:').push()
+         .fl('void initModule(md.MDThread* t)')
+         .push('{')
+         .do(self.generateTypePush(
+             node.type, '%s.%s' % (st.module.fqi, node.ident), st))
+         .fl('md.newGlobal(t, "%s");', node.ident)
+         .pop('}')
+         .pop('}')
+         .l()
+         )
 
 
     def visitSemClassDecl(self, node, st):
@@ -145,6 +187,7 @@ class CGSemVisitor(SemVisitor):
          .pl('classRef = md.createRef(t, -1);')
          .pl('assert( classRef != classRef.max );')
          .l()
+         # TODO: is this actually needed?
          .pl('md.newGlobal(t, Name);')
          .pop('}')
          .l()
@@ -365,6 +408,7 @@ class CGSemVisitor(SemVisitor):
 
         (st.o
          .pop('}')
+         .l()
          )
 
 
@@ -439,70 +483,115 @@ class CGSemVisitor(SemVisitor):
 
 
     def visitSemFuncDecl(self, node, st):
+        self.visitFunction(node, st)
+
+
+    def visitSemOpDecl(self, node, st):
+        self.visitFunction(node, st)
+
+
+    def visitSemOverloadDecl(self, node, st):
+        self.visitFunction(node, st, node.overloads)
+
+
+    def visitFunction(self, node, st, overloads=None):
+        if overloads is None:
+            overloads = (node,)
+        
+        isOp = isinstance(node, SemOpDecl) or (
+            isinstance(node, SemOverloadDecl) and node.type is SemOpDecl)
+        isFunc = not isOp
+
+        d_name, md_name = None, None
+
+        if isFunc:
+            d_name = node.ident
+            md_name = node.ident
+
+        elif isOp:
+            d_name, md_name = self.getOpNames(node)
+
+        else:
+            assert False
+
+        prefix = ('method' if isFunc else
+                  'op_method' # if isOp
+                  )
+
         (st.o
-         .fl('md.uword method_%s(md.MDThread* t, md.uword numParams)',
-             node.ident)
+         .fl('md.uword %s_%s(md.MDThread* t, md.uword numParam)',
+             prefix, node.ident)
          .push('{')
          .pl('mdu.checkInstParamRef(t, 0, classRef);')
          .pl('auto obj = getWrap(t);')
          .l()
          )
 
-        void_ret = False
+        for overload in overloads:
+            void_ret = False
 
-        if (isinstance(node.returnType, SemSymbolType)
-                and node.returnType.ident == 'void'):
-            void_ret = True
+            if (isinstance(overload.returnType, SemSymbolType)
+                    and overload.returnType.ident == 'void'):
+                void_ret = True
 
+            (st.o
+             .fl('if( numParams == %d )', len(overload.args))
+             .push('{')
+             )
+
+            # TODO: need to work out how to do type checks such that they
+            # don't throw an exception: we want to try another overload if
+            # the given types don't match.
+
+            (st.o
+             .fl('md.stackCheck(t, %d, delegate void()', 0 if void_ret else 1)
+             .push('{')
+             )
+
+            for i,arg in enumerate(overload.args):
+                ident = arg.ident
+                if ident is None: ident = "__op_arg_%d" % i
+                
+                if arg.isRef:
+                    st.o.fl('/* TODO: ref arg %s */', arg.ident)
+                if arg.isOut:
+                    st.o.fl('/* TODO: out arg %s */', arg.ident)
+                if arg.isLazy:
+                    st.o.fl('/* TODO: lazy arg %s */', arg.ident)
+                    
+                self.generateTypeCheck(arg.type, i+1, st)
+
+            for i,arg in enumerate(overload.args):
+                st.o.fl('auto __arg_%d = (%s);', i,
+                        self.generateTypeRead(arg.type, i+1, st))
+
+            call = 'obj.%s(%s)' % (
+                d_name,
+                ", ".join(("__arg_%d" % i) for i in xrange(len(overload.args))))
+
+            if void_ret:
+                st.o.fl('%s;', call)
+
+            else:
+                st.o.fl('auto result = %s;', call)
+                self.generateTypePush(overload.returnType, 'result', st)
+            
+            (st.o
+             .pop('}')
+             .l()
+             .fl('return %d;', 0 if void_ret else 1)
+             .pop('}')
+             .l()
+             )
+
+        # Fall-through if we didn't match any overloads
+        # TODO: build usage string
         (st.o
-         .fl('md.stackCheck(t, %d, delegate void()', 0 if void_ret else 1)
-         .push('{')
-         .fl('if( numParams != %d )', len(node.args))
-         .push('{')
-         # TODO: build usage string
          .fl('md.throwException(t, "Bad arguments to %s");', node.ident)
          .pl('assert(false);')
          .pop('}')
          .l()
          )
-
-        for i,arg in enumerate(node.args):
-            if arg.isRef:
-                st.o.fl('/* TODO: ref arg %s */', arg.ident)
-            if arg.isOut:
-                st.o.fl('/* TODO: out arg %s */', arg.ident)
-            if arg.isLazy:
-                st.o.fl('/* TODO: lazy arg %s */', arg.ident)
-            self.generateTypeCheck(arg.type, i+1, st)
-
-        for i,arg in enumerate(node.args):
-            st.o.fl('auto __arg_%d = (%s);', i,
-                    self.generateTypeRead(arg.type, i+1, st))
-
-        call = 'obj.%s(%s)' % (
-            node.ident,
-            ", ".join(("__arg_%d" % i) for i in xrange(len(node.args))))
-
-        if void_ret:
-            st.o.fl('%s;', call)
-
-        else:
-            st.o.fl('auto result = %s;', call)
-            self.generateTypePush(node.returnType, 'result', st)
-        
-        (st.o
-         .pop('}')
-         )
-        
-        (st.o
-         .fl('return %d;', 0 if void_ret else 1)
-         .pop('}')
-         .l()
-         )
-
-
-    def visitSemOpDecl(self, node, st):
-        self.unimpl(node, st)
 
 
     def visitSemMixin(self, node, st):
@@ -514,18 +603,19 @@ class CGSemVisitor(SemVisitor):
          .pl('struct MD_Module')
          .push('{')
          .pop().pl('static:').push()
-         .pl('void init(MDThread* t)')
+         .pl('void init(md.MDThread* t)')
          .push('{')
          )
 
         for decl in node.decls:
             if isinstance(decl, SemMixin): continue
             if isinstance(decl, SemImportDecl): continue
+            if isinstance(decl, SemConstDecl): continue
             st.o.fl('MD_%s.init(t);', decl.ident)
         
         (st.o
          .l()
-         .fl('md.makeModule(t, "%s", function uword(MDThread* t,'
+         .fl('md.makeModule(t, "%s", function uword(md.MDThread* t,'
              +' uword numParams)', node.fqi)
          .push('{')
          )
@@ -820,10 +910,40 @@ class CGSemVisitor(SemVisitor):
                 # do nothing
                 pass
 
-            elif isinstance(decl, SemOpDecl):
-                st.o.fl('/* unimplemented init method bind for op %s */', decl.ident)
+            elif isinstance(decl, SemOpDecl) or (
+                    isinstance(decl, SemOverloadDecl)
+                    and decl.type is SemOpDecl):
+                d_name,md_name = self.getOpNames(decl)
+                st.o.fl('c.method("%s", &op_method_%s);', md_name, decl.ident)
 
             else:
                 st.o.fl('c.method("%s", &method_%s);', decl.ident, decl.ident)
+
+
+    def getOpNames(self, node):
+        ident = node.ident
+        d_name = None
+        md_name = None
+
+        if ident in OP_SELF or (
+                ident in OP_SELF_BIN
+                or (ident.endswith("_r") and ident[:-2] in OP_SELF_BIN)
+                or (ident.endswith("Assign") and ident[:-6] in OP_SELF_BIN)
+            ):
+            d_name = 'op' + ident[0].upper() + ident[1:]
+            md_name = d_name
+
+        elif ident in OP_MAP:
+            d_name, md_name = OP_MAP[ident]
+
+        elif ident in OP_SPECIAL:
+            def missing(node,st):
+                assert False, "missing special operator %s" % ident
+            return getattr(self,"visitSemOpDecl_"+ident,missing)(node, st)
+
+        else:
+            assert False, "unknown operator %s" % ident
+
+        return d_name, md_name
 
 
