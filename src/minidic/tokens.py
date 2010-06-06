@@ -4,6 +4,7 @@
 LITERAL_TOKENS = dict((u"TOK"+p,p) for p in u"""
     class
     const
+    enum
     func
     import
     module

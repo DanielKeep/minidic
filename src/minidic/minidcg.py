@@ -485,6 +485,158 @@ class CGSemVisitor(SemVisitor):
         st.typeIsClass = old_typeIsClass
 
 
+    def visitSemEnumDecl(self, node, st):
+        class_fqn = st.module.fqi + '.' + node.ident
+        class_fqn_md = class_fqn
+
+        prefix = (st.module.fqi + '.' + node.ident + '.'
+                  if not node.flat
+                  else st.module.fqi + '.')
+        
+        (st.o
+         .fl('struct MD_%s', node.ident)
+         .push('{')
+         .pop().fl('static:').push()
+         .fl('const Name = "%s";', node.ident)
+         .fl('const FQName = "%s";', class_fqn_md)
+         .l()
+         )
+
+        # init
+        (st.o
+         .pl('void init(md.MDThread* t)')
+         .pl('{')
+         .pl('}')
+         .l()
+         )
+
+        # initModule
+        (st.o
+         .pl('void initModule(md.MDThread* t)')
+         .push('{')
+         .pl('auto ns = md.newNamespace(t, FQName);')
+         .l()
+         .pl('md.newFunction(t, &method_toString, "toString");')
+         .pl('md.fielda(t, ns, "toString");')
+         .l()
+         )
+
+        if node.flat:
+            (st.o
+             .pl('md.newGlobal(t, Name);')
+             )
+
+            for member in node.members:
+                (st.o
+                 .fl('md.pushInt(t, %s);', prefix+member)
+                 .fl('md.newGlobal(t, "%s");', member)
+                 )
+
+            (st.o
+             .pop('}')
+             .l()
+             )
+
+        else:
+            for member in node.members:
+                (st.o
+                 .fl('md.pushInt(t, %s);', prefix+member)
+                 .fl('md.fielda(t, ns, "%s");', member)
+                 )
+
+            (st.o
+             .pl('md.newGlobal(t, Name);')
+             .pop('}')
+             .l()
+             )
+
+        # getValue
+        (st.o
+         .fl('%s getValue(md.MDThread* t, md.word slot = 0)', class_fqn)
+         .push('{')
+         .fl('return to!(%s)(md.getInt(t, slot));', class_fqn)
+         .pop('}')
+         .l()
+         )
+
+        # popValue
+        (st.o
+         .fl('%s popValue(md.MDThread* t)', class_fqn)
+         .push('{')
+         .pl('auto r = getValue(t, -1);')
+         .pl('md.pop(t);')
+         .pl('return r;')
+         .pop('}')
+         .l()
+         )
+
+        # pushPtr
+        (st.o
+         .pl('void pushPtr(md.MDThread* t, void* ptr)')
+         .push('{')
+         .fl('create(t, *cast(%s*)(ptr));', class_fqn)
+         .pop('}')
+         .l()
+         )
+
+        # popPtr
+        (st.o
+         .pl('void popPtr(md.MDThread* t, void* ptr)')
+         .push('{')
+         .fl('*(cast(%s*)(ptr)) = popValue(t);', class_fqn)
+         .pop('}')
+         .l()
+         )
+
+        # create (Type*)
+        (st.o
+         .fl('void create(md.MDThread* t, %s* ptr)', class_fqn)
+         .push('{')
+         .pl('create(t, *ptr);')
+         .pop('}')
+         .l()
+         )
+
+        # create (Type)
+        (st.o
+         .fl('void create(md.MDThread* t, %s ptr)', class_fqn)
+         .push('{')
+         .pl('md.pushInt(t, ptr);')
+         .pop('}')
+         .l()
+         )
+
+        # method_toString
+        (st.o
+         .pl('md.uword method_toString(md.MDThread* t, md.uword numParams)')
+         .push('{')
+         .pl('auto v = getValue(t, 1);')
+         .pl('char[] s;')
+         .pl('switch( v )')
+         .push('{')
+         )
+
+        for member in node.members:
+            (st.o
+             .fl('case %s: s = "%s"; break;', prefix+member, member)
+             )
+
+        (st.o
+         .pl('default:')
+         .push().pl('md.throwException(t, "Unknown "~Name~": \'{}\'", v);').pop()
+         .pop('}')
+         .pl('md.pushString(t, s);')
+         .pl('return 1;')
+         .pop('}')
+         .l()
+         )
+
+        (st.o
+         .pop('}')
+         .l()
+         )
+
+
     def visitSemRoDecl(self, node, st):
         (st.o
          .fl('md.uword method_%s(md.MDThread* t, md.uword numParams)',

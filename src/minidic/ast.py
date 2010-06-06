@@ -157,6 +157,34 @@ class AstStructDecl(AstAggregateDecl):
 
 
 
+class AstEnumDecl(AstDecl):
+
+    ident = None
+    annots = None
+    members = None
+
+    def __init__(self):
+        self.annots = []
+        self.members = []
+
+
+    def dump(self, o):
+        o.fl("Enum %s", self.ident)
+        o.push("{")
+
+        if self.annots:
+            for annot in self.annots:
+                o.p("Annot ")
+                annot.dump(o)
+                o.l()
+
+        for member in self.members:
+            o.fl("Member %s", member)
+        
+        o.pop("}")
+
+
+
 class AstAccessorDecl(AstDecl):
 
     ident = None

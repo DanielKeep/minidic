@@ -222,6 +222,22 @@ class SemAstVisitor(AstVisitor):
         return sn
 
 
+    def visitAstEnumDecl(self, node, st):
+        sn = SemEnumDecl()
+        sn.src = node.src
+        sn.ident = node.ident
+        sn.members = node.members
+
+        for annot in (a.ident for a in (node.annots or []) + st.annots):
+            if annot == "flat":
+                sn.flat = True
+
+            else:
+                assert False, "unknown enum annotation '%s'" % annot
+
+        return sn
+
+
     def visitAstRoDecl(self, node, st):
         sn = SemRoDecl()
         sn.src = node.src

@@ -148,6 +148,7 @@ def parseDecl(ls):
         or tryParseConstDecl(ls)
         or tryParseClassDecl(ls)
         or tryParseStructDecl(ls)
+        or tryParseEnumDecl(ls)
         or tryParseRoDecl(ls)
         or tryParseRwDecl(ls)
         or tryParseFuncDecl(ls)
@@ -211,6 +212,27 @@ def tryParseStructDecl(ls):
     agrgDecl = parseAggregateDecl(ls)
     agrgDecl.src = tok.src
     return agrgDecl.copyAs(AstStructDecl)
+
+
+def tryParseEnumDecl(ls):
+    if ls.peek().type != TOKenum: return
+
+    enum = AstEnumDecl()
+    enum.src = ls.pop().src
+    enum.ident = ls.popExpect(TOKident).value
+    enum.annots = tryParseAnnotations(ls) or []
+    enum.members = []
+    ls.popExpect(TOKlbrace)
+    if ls.peek().type != TOKrbrace:
+        while True:
+            enum.members.append(ls.popExpect(TOKident).value)
+            if ls.peek().type == TOKrbrace:
+                break
+            ls.popExpect(TOKcomma)
+
+    ls.popExpect(TOKrbrace)
+
+    return enum
 
 
 def tryParseRoDecl(ls):

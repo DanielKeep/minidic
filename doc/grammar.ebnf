@@ -11,6 +11,7 @@ declaration = import declaration
             | const declaration
             | class declaration
             | struct declaration
+            | enum declaration
             | ro declaration
             | rw declaration
             | func declaration
@@ -29,6 +30,9 @@ aggregate declaration = identifier , [ annotations ] ,
 class declaration = "class" , aggregate declaration ;
 
 struct declaration = "struct" , aggregate declaration ;
+
+enum declaration = "enum" , identifier , [ annotations ] ,
+                   "{" , [ identifier , { "," , identifier } ] , "}" ;
 
 ro declaration = "ro" , accessor declaration ;
 

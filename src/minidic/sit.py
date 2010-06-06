@@ -133,6 +133,25 @@ class SemStructDecl(SemAggregateDecl):
 
 
 
+class SemEnumDecl(SemDecl):
+
+    ident = None
+    members = None
+
+    flat = False
+
+    def __init__(self):
+        self.members = []
+
+
+    def valid(self):
+        return all((
+            self.ident is not None,
+            all(isinstance(member, basestring) for member in self.members),
+        ))
+
+
+
 class SemAccessorDecl(SemDecl):
 
     ident = None
