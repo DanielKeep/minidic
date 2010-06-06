@@ -2,8 +2,8 @@
 #
 # MiniD Interface Compiler
 #
-# Usage: minidic MDIFILE
-#        minidic package.mdi
+# Usage: minidic PKG MDIFILE
+#        minidic PKG package.mdi
 #
 
 __all__ = ['compile']
@@ -74,7 +74,7 @@ def compile(pkg, path, follow=True, done=None):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) < 3:
-        print 'Usage: compile.py PKG FILE'
+        print 'Usage: compile.py (PKG|-) FILE'
         print '       (got: %r)' % sys.argv
         sys.exit(1)
 
