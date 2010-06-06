@@ -168,6 +168,11 @@ def tryParseImportDecl(ls):
 
     decl = AstImportDecl()
     decl.src = ls.pop().src
+
+    if ls.peek().type == TOKpackage:
+        ls.pop()
+        decl.isPackage = True
+
     decl.module = parseFQI(ls)
     if ls.peek().type == TOKcolon:
         ls.pop()

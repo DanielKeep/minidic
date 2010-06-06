@@ -78,5 +78,8 @@ if __name__ == '__main__':
         print '       (got: %r)' % sys.argv
         sys.exit(1)
 
-    compile(sys.argv[1], sys.argv[2])
+    pkg = sys.argv[1]
+    pkg = pkg if pkg != "-" else None
+    
+    compile(pkg, sys.argv[2])
 

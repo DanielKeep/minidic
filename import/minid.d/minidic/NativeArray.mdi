@@ -2,7 +2,8 @@ module minidic.NativeArray;
 
 mixin
 <{
-import tango.util.Convert : to;
+// This is imported automatically.
+//import tango.util.Convert : to;
 
 /*
  * This is our actual payload.
@@ -19,7 +20,7 @@ private class NativeArray
     */
     TypeInfo ti;
     /// Function used to push an element to the MiniD stack via a pointer.
-    void function(MDThread* t, void* ptr) pushElement;
+    void function(md.MDThread* t, void* ptr) pushElement;
 }
 }>
 
@@ -74,7 +75,7 @@ class NativeArray [nativeLocal]
             {
                 auto v = *cast(T*)ptr;
                 md.pushInt(t, v);
-            }
+            };
         }
         else static if( is( T : real ) )
         {
@@ -99,7 +100,7 @@ class NativeArray [nativeLocal]
             static assert(false);
         }
 
-        md.createFrom(t, arr, pushFn);
+        MD_NativeArray.createFrom(t, arr, pushFn);
     }
 
     /// ditto
@@ -156,24 +157,24 @@ class NativeArray [nativeLocal]
         }
     }
 
-    static void checkInstParam(md.MDThread* t, md.word slot,
+    static void checkInstParamEx(md.MDThread* t, md.word slot,
             void function(md.MDThread*, md.word) checkFn,
             TypeInfo elemTi)
     {
         auto index = md.absIndex(t, slot);
 
         // TODO: verify all elements of minid arrays
-        if( ! (isInstParamRef(t, slot) or md.isArray(t, slot)) )
+        if( ! (isInstParamRef(t, slot) || md.isArray(t, slot)) )
         {
             md.pushTypeString(t, index);
 
             if( index == 0 )
                 md.throwException(t, "Expected array for 'this', not {}",
-                        getString(t, -1));
+                        md.getString(t, -1));
 
             else
                 md.throwException(t, "Expected array for parameter {},"
-                        " not {}", index, getString(t, -1));
+                        " not {}", index, md.getString(t, -1));
 
             assert(false);
         }
@@ -196,14 +197,14 @@ class NativeArray [nativeLocal]
         the top of the MiniD stack, convert it to a D array and return it as a
         void[] to be casted back to the original type by the caller.
     */
-    static void[] popValue(md.MDThread* t, md.word slot,
+    static void[] popValueEx(md.MDThread* t, md.word slot,
             void function(md.MDThread*, void*) popFn,
             TypeInfo elemTi)
     {
         if( isInstParamRef(t, -1) )
             return popValueNative(t, slot, elemTi);
         
-        else if( isArray(t, -1) )
+        else if( md.isArray(t, -1) )
             return popValueMiniD(t, slot, popFn, elemTi);
 
         else
@@ -239,10 +240,10 @@ class NativeArray [nativeLocal]
     {
         auto index = md.absIndex(t, slot);
 
-        if( !isArray(t, index) )
+        if( !md.isArray(t, index) )
         {
-            pushTypeString(t, index);
-            throwException(t, "Expected array, not {}", getString(t, -1));
+            md.pushTypeString(t, index);
+            md.throwException(t, "Expected array, not {}", md.getString(t, -1));
             assert(false);
         }
 

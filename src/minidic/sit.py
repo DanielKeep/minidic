@@ -73,6 +73,7 @@ class SemImportDecl(SemDecl):
 
     module = None
     symbol = None
+    isPackage = False
 
     def valid(self):
         return all((

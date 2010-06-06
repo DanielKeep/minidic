@@ -28,12 +28,12 @@ void checkInstParamRef(md.MDThread* t, md.word slot, ulong classRef)
 
         if( index == 0 )
             md.throwException(t, "Expected instance of class {} "
-                    "for 'this', not {}", name, getString(t, -1));
+                    "for 'this', not {}", name, md.getString(t, -1));
 
         else
             md.throwException(t, "Expected instance of class {} "
                     "for parameter {}, not {}",
-                    name, index, getString(t, -1));
+                    name, index, md.getString(t, -1));
     }
 
     md.pop(t);
@@ -43,7 +43,7 @@ void checkInstParamRef(md.MDThread* t, md.word slot, ulong classRef)
     popPtr implementation for basic MiniD types.
 */
 
-void popPtr!(T)(MDThread* t, void* ptr)
+void popPtr(T)(md.MDThread* t, void* ptr)
 {
     static if( is( T : bool ) )
     {
@@ -70,9 +70,37 @@ void popPtr!(T)(MDThread* t, void* ptr)
 }
 
 /**
+    These methods wrap the regular MiniD calls, but discard the result.
+*/
+void checkBoolParamNR(md.MDThread* t, md.word slot)
+{
+    md.checkBoolParam(t, slot);
+}
+/// ditto
+void checkIntParam(md.MDThread* t, md.word slot)
+{
+    md.checkIntParam(t, slot);
+}
+/// ditto
+void checkFloatParam(md.MDThread* t, md.word slot)
+{
+    md.checkFloatParam(t, slot);
+}
+/// ditto
+void checkCharParam(md.MDThread* t, md.word slot)
+{
+    md.checkCharParam(t, slot);
+}
+/// ditto
+void checkStringParam(md.MDThread* t, md.word slot)
+{
+    md.checkStringParam(t, slot);
+}
+
+/**
     Checks that the parameter at the given index is a function.
 */
-void checkFunctionParam(md.MDThread* t, word slot)
+void checkFunctionParam(md.MDThread* t, md.word slot)
 {
     auto index = md.absIndex(t, slot);
 
@@ -82,11 +110,11 @@ void checkFunctionParam(md.MDThread* t, word slot)
 
         if( index == 0 )
             md.throwException(t, "Expected function for 'this', not {}",
-                    getString(t, -1));
+                    md.getString(t, -1));
 
         else
             md.throwException(t, "Expected function for parameter {}, not {}",
-                    index, getString(t, -1));
+                    index, md.getString(t, -1));
     }
 }
 

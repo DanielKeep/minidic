@@ -2,8 +2,9 @@
 module minidic.NativeArray;
 
 static import md = minid.api;
-static import mdu = minid.util;
+static import mdu = minid.utils;
 static import mdi = minidic.binding;
+import tango.util.Convert : to;
 
 struct MD_Module
 {
@@ -12,7 +13,7 @@ static:
   {
     MD_NativeArray.init(t);
     
-    md.makeModule(t, "minidic.NativeArray", function uword(md.MDThread* t, uword numParams)
+    md.makeModule(t, "minidic.NativeArray", function md.uword(md.MDThread* t, md.uword numParams)
     {
       MD_NativeArray.initModule(t);
       return 0;
@@ -21,7 +22,8 @@ static:
 }
 
 
-import tango.util.Convert : to;
+// This is imported automatically.
+//import tango.util.Convert : to;
 
 /*
  * This is our actual payload.
@@ -38,7 +40,7 @@ private class NativeArray
     */
     TypeInfo ti;
     /// Function used to push an element to the MiniD stack via a pointer.
-    void function(MDThread* t, void* ptr) pushElement;
+    void function(md.MDThread* t, void* ptr) pushElement;
 }
 
 struct MD_NativeArray
@@ -87,7 +89,7 @@ static:
   
   void checkInstParam(md.MDThread* t, md.word slot = 0)
   {
-    mdi.checkInstParamRef(t, slot, classRef)
+    mdi.checkInstParamRef(t, slot, classRef);
   }
   
   Wrap getWrap(md.MDThread* t, md.word slot = 0)
@@ -112,20 +114,26 @@ static:
     });
   }
   
-  void pushPtr(MDThread* t, void* ptr)
+  NativeArray getValue(md.MDThread* t, md.word slot = 0)
+  {
+    auto wrap = getWrap(t, slot);
+    return wrap;
+  }
+  
+  void pushPtr(md.MDThread* t, void* ptr)
   {
     create(t, cast(RawWrapRef)(*cast(Object*) ptr));
   }
   
-  NativeArray popValue(MDThread* t)
+  NativeArray popValue(md.MDThread* t)
   {
     auto r = getWrap(t, -1);
-    pop(t);
+    md.pop(t);
     
     return r;
   }
   
-  void popPtr(MDThread* t, void* ptr)
+  void popPtr(md.MDThread* t, void* ptr)
   {
     *(cast(RawWrapRef*)(ptr)) = popValue(t);
   }
@@ -239,7 +247,7 @@ static:
             {
                 auto v = *cast(T*)ptr;
                 md.pushInt(t, v);
-            }
+            };
         }
         else static if( is( T : real ) )
         {
@@ -264,7 +272,7 @@ static:
             static assert(false);
         }
 
-        md.createFrom(t, arr, pushFn);
+        MD_NativeArray.createFrom(t, arr, pushFn);
     }
 
     /// ditto
@@ -321,24 +329,24 @@ static:
         }
     }
 
-    static void checkInstParam(md.MDThread* t, md.word slot,
+    static void checkInstParamEx(md.MDThread* t, md.word slot,
             void function(md.MDThread*, md.word) checkFn,
             TypeInfo elemTi)
     {
         auto index = md.absIndex(t, slot);
 
         // TODO: verify all elements of minid arrays
-        if( ! (isInstParamRef(t, slot) or md.isArray(t, slot)) )
+        if( ! (isInstParamRef(t, slot) || md.isArray(t, slot)) )
         {
             md.pushTypeString(t, index);
 
             if( index == 0 )
                 md.throwException(t, "Expected array for 'this', not {}",
-                        getString(t, -1));
+                        md.getString(t, -1));
 
             else
                 md.throwException(t, "Expected array for parameter {},"
-                        " not {}", index, getString(t, -1));
+                        " not {}", index, md.getString(t, -1));
 
             assert(false);
         }
@@ -361,14 +369,14 @@ static:
         the top of the MiniD stack, convert it to a D array and return it as a
         void[] to be casted back to the original type by the caller.
     */
-    static void[] popValue(md.MDThread* t, md.word slot,
+    static void[] popValueEx(md.MDThread* t, md.word slot,
             void function(md.MDThread*, void*) popFn,
             TypeInfo elemTi)
     {
         if( isInstParamRef(t, -1) )
             return popValueNative(t, slot, elemTi);
         
-        else if( isArray(t, -1) )
+        else if( md.isArray(t, -1) )
             return popValueMiniD(t, slot, popFn, elemTi);
 
         else
@@ -404,10 +412,10 @@ static:
     {
         auto index = md.absIndex(t, slot);
 
-        if( !isArray(t, index) )
+        if( !md.isArray(t, index) )
         {
-            pushTypeString(t, index);
-            throwException(t, "Expected array, not {}", getString(t, -1));
+            md.pushTypeString(t, index);
+            md.throwException(t, "Expected array, not {}", md.getString(t, -1));
             assert(false);
         }
 
@@ -436,7 +444,7 @@ static:
         return r;
     }
       
-  md.uword op_method_index(md.MDThread* t, md.uword numParam)
+  md.uword op_method_index(md.MDThread* t, md.uword numParams)
   {
     mdi.checkInstParamRef(t, 0, classRef);
     auto obj = getWrap(t);
@@ -460,7 +468,7 @@ static:
     assert(false);
   }
   
-  md.uword op_method_slice(md.MDThread* t, md.uword numParam)
+  md.uword op_method_slice(md.MDThread* t, md.uword numParams)
   {
     mdi.checkInstParamRef(t, 0, classRef);
     auto obj = getWrap(t);
@@ -505,7 +513,7 @@ static:
     assert(false);
   }
   
-  md.uword method_opLength(md.MDThread* t, md.uword numParam)
+  md.uword method_opLength(md.MDThread* t, md.uword numParams)
   {
     mdi.checkInstParamRef(t, 0, classRef);
     auto obj = getWrap(t);
@@ -520,7 +528,7 @@ static:
     assert(false);
   }
   
-  md.uword method_opApply(md.MDThread* t, md.uword numParam)
+  md.uword method_opApply(md.MDThread* t, md.uword numParams)
   {
     mdi.checkInstParamRef(t, 0, classRef);
     auto obj = getWrap(t);
@@ -537,7 +545,7 @@ static:
     assert(false);
   }
   
-  md.uword method_toArray(md.MDThread* t, md.uword numParam)
+  md.uword method_toArray(md.MDThread* t, md.uword numParams)
   {
     mdi.checkInstParamRef(t, 0, classRef);
     auto obj = getWrap(t);
@@ -567,7 +575,7 @@ static:
     assert(false);
   }
   
-  md.uword method_elemType(md.MDThread* t, md.uword numParam)
+  md.uword method_elemType(md.MDThread* t, md.uword numParams)
   {
     mdi.checkInstParamRef(t, 0, classRef);
     auto obj = getWrap(t);

@@ -79,11 +79,13 @@ class AstImportDecl(AstDecl):
 
     module = None
     symbol = None
+    isPackage = False
 
     def dump(self, o):
-        o.fl("Import %s%s", self.module,
-             " : %s" % self.symbol if self.symbol is not None
-             else "")
+        o.fl("Import %s%s%s",
+             ("package " if self.isPackage else ""),
+             self.module,
+             (" : %s" % self.symbol if self.symbol is not None else ""))
 
 
 

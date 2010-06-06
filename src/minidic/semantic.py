@@ -84,6 +84,7 @@ class SemAstVisitor(AstVisitor):
     def visitAstImportDecl(self, node, st):
         sn = SemImportDecl()
         sn.src = node.src
+        sn.isPackage = node.isPackage
         sn.module = node.module
         sn.symbol = node.symbol
 
@@ -277,6 +278,9 @@ class SemAstVisitor(AstVisitor):
         sn.src = node.src
         sn.ident = node.ident
 
+        # sn.args defaults to an empty list; clear it
+        sn.args = None
+
         if node.returnType is not None:
             sn.returnType = self.visit(node.returnType, st)
 
@@ -287,6 +291,10 @@ class SemAstVisitor(AstVisitor):
 
         if sn.args is None:
             sn.args = guessOpArgs(sn.ident, st)
+
+            if sn.args is None:
+                # Urgh, I give up!
+                sn.args = []
 
         if sn.returnType is None:
             sn.returnType = guessOpReturnType(sn.ident, st)
@@ -394,20 +402,29 @@ def guessOpArgs(name, st):
     if name in CLOSED_BINARY_OPS:
         ty = SemSymbolType()
         ty.ident = st.enclosingType.ident
-        return [ty]
+
+        arg = SemArgument()
+        arg.type = ty
+        arg.isOpArg = True
+        
+        return [arg]
 
     if name in SELF_BINARY_OPS:
         et = st.enclosingType
+        ty = SemSymbolType()
+        
         if isinstance(et, SemClassDecl):
-            ty = SemSymbolType()
             ty.ident = "Object"
-            return [ty]
         elif isinstance(et, SemStructDecl):
-            ty = SemSymbolType()
             ty.ident = et.ident
-            return [ty]
         else:
             assert False
+
+        arg = SemArgument()
+        arg.type = ty
+        arg.isOpArg = True
+
+        return [arg]
     
     assert False, "could not determine arguments for operator '%s'" % name
 

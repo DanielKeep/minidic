@@ -1,0 +1,4 @@
+package minidic;
+
+import NativeArray;
+
